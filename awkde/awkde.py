@@ -147,7 +147,7 @@ class GaussianKDE(BaseEstimator):
         self.__call__.__func__.__doc__ = self.predict.__doc__
         return self.predict(X)
 
-    def fit(self, X, bounds=None, weights=None):
+    def fit(self, X, bandwidth=None, bounds=None, weights=None):
         """
         Prepare KDE to describe the data.
 
@@ -161,6 +161,8 @@ class GaussianKDE(BaseEstimator):
         X : array-like, shape (n_samples, n_features)
             Data points defining each kernel position. Each row is a point, each
             column is a feature.
+        bandwidth : array-like, shape (n_samples)
+            Manual override of the local bandwidth.
         bounds : array-like, shape (n_features, 2)
             Boundary condition for each dimension. The method of mirrored points
             is used to improve prediction close to bounds. If no bound shall be
@@ -197,9 +199,8 @@ class GaussianKDE(BaseEstimator):
         # Get weights and normalize them to one
         if weights is not None:
 
-            if weights.shape != (self._n_kernels):
-                raise ValueError("`weights` must have shape (n_samples)."
-                                 )
+            if weights.shape != (self._n_kernels,):
+                raise ValueError("`weights` must have shape (n_samples)")
             self.weights = weights / sum(weights)
 
         else:
@@ -208,13 +209,22 @@ class GaussianKDE(BaseEstimator):
         self._std_X, self._mean, self._cov = standardize_nd_sample(
             X, weights=self.weights, cholesky=True, ret_stats=True, diag=self._diag_cov)
 
-        # Get global bandwidth number
-        self._glob_bw = self._get_glob_bw(self._glob_bw) # TO DO: Doesnt take into account weights yet...
+        # Manual override
+        if bandwidth is not None:
 
-        # Build local bandwidth parameter if alpha is set
-        if self._adaptive:
-            self._kde_values = self._evaluate(self._std_X, adaptive=False)
-            self._calc_local_bandwidth()
+            if bandwidth.shape != (self._n_kernels,):
+                raise ValueError("`bandwidth` must have shape (n_samples)")
+
+            self._inv_loc_bw = 1./bandwidth
+
+        else:
+            # Get global bandwidth number
+            self._glob_bw = self._get_glob_bw(self._glob_bw)  # TO DO: take into account weights here...
+
+            # Build local bandwidth parameter if alpha is set
+            if self._adaptive:
+                self._kde_values = self._evaluate(self._std_X, adaptive=False)
+                self._calc_local_bandwidth()
 
         return self._mean, self._cov
 
@@ -458,7 +468,7 @@ class GaussianKDE(BaseEstimator):
     def _calc_local_bandwidth(self):
         """ Build the local bandwidth from cached ``_kde_values``."""
         # Get local bandwidth from local "density" g
-        g = (np.exp(np.sum(np.log(self._kde_values)) / self._n_kernels))
+        g = (np.exp(np.sum(np.log(self._kde_values)) / self._n_kernels)) #???
         # Needed inverted so use power of (+alpha), shape (n_samples)
         self._inv_loc_bw = (self._kde_values / g)**(self._alpha)
         return

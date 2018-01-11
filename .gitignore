@@ -201,3 +201,6 @@ ENV/
 /site
 
 # End of https://www.gitignore.io/api/c,osx,c++,python
+
+/.idea
+*~
