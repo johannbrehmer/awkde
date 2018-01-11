@@ -14,7 +14,7 @@ standard_library.install_aliases()
 import numpy as _np
 
 
-def standardize_nd_sample(sam, mean=None, cov=None,
+def standardize_nd_sample(sam, weights=None, mean=None, cov=None,
                           cholesky=True, ret_stats=False, diag=False):
     """
     Standardizes a n-dimensional sample using the Mahalanobis distance.
@@ -28,6 +28,8 @@ def standardize_nd_sample(sam, mean=None, cov=None,
     ----------
     sam : array-like, shape (n_samples, n_features)
         Data points in the sample, each column is a feature, each row a point.
+    weights : array-like, shape (n_samples), optional
+        Weights for the sample.
     mean : array-like, shape (n_features), optional
         If explicitely given, use this mean vector for the transformation. If
         None, the estimated mean from data is used. (default: None)
@@ -69,8 +71,8 @@ def standardize_nd_sample(sam, mean=None, cov=None,
         raise ValueError("Shape of `sam` must be (n_samples, n_features).")
     if mean is None and cov is None:
         # Mean and cov over the first axis
-        mean = _np.mean(sam, axis=0)
-        cov = _np.atleast_2d(_np.cov(sam, rowvar=False))
+        mean = _np.average(sam, weights=weights, axis=0)
+        cov = _np.atleast_2d(_np.cov(sam, aweights=weights, rowvar=False))
     elif mean is not None and cov is not None:
         mean = _np.atleast_1d(mean)
         cov = _np.atleast_2d(cov)

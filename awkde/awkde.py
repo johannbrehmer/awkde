@@ -180,27 +180,36 @@ class GaussianKDE(BaseEstimator):
 
         Raises
         ------
-        ``NotImplementedError`` if ``bounds`` or ``weights`` are not ``None``.
+        ``NotImplementedError`` if ``bounds`` are not ``None``.
         """
         if bounds is not None:
             # TODO: Use mirroring of points near boundary regions and then
             #       constrain KDE to values inside Region but taking all kernels
             #       into account. (only neccessary on hard cuts)
             raise NotImplementedError("TODO: Boundary conditions.")
-        if weights is not None:
-            # TODO: Implement weighted statitistics
-            raise NotImplementedError("TODO: Implement weighted statistics.")
 
         if len(X.shape) != 2:
             raise ValueError("`X` must have shape (n_samples, n_features).")
 
         # Transform sample to zero mean and unity covariance matrix
         self._n_kernels, self._n_features = X.shape
+
+        # Get weights and normalize them to one
+        if weights is not None:
+
+            if weights.shape != (self._n_kernels):
+                raise ValueError("`weights` must have shape (n_samples)."
+                                 )
+            self.weights = weights / sum(weights)
+
+        else:
+            self.weights = np.ones(self._n_kernels) / self._n_kernels
+
         self._std_X, self._mean, self._cov = standardize_nd_sample(
-            X, cholesky=True, ret_stats=True, diag=self._diag_cov)
+            X, weights=self.weights, cholesky=True, ret_stats=True, diag=self._diag_cov)
 
         # Get global bandwidth number
-        self._glob_bw = self._get_glob_bw(self._glob_bw)
+        self._glob_bw = self._get_glob_bw(self._glob_bw) # TO DO: Doesnt take into account weights yet...
 
         # Build local bandwidth parameter if alpha is set
         if self._adaptive:
@@ -431,7 +440,7 @@ class GaussianKDE(BaseEstimator):
             invbw *= self._inv_loc_bw
 
         # Total norm, including gaussian kernel norm with data covariance
-        norm = invbw**d / np.sqrt(np.linalg.det(2 * np.pi * self._cov)) / n
+        norm = invbw**d / np.sqrt(np.linalg.det(2 * np.pi * self._cov)) * self.weights
 
         return backend.kernel_sum(self._std_X, X, invbw, norm)
 
