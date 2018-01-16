@@ -218,30 +218,12 @@ class GaussianKDE(BaseEstimator):
             # Get global bandwidth number
             self._glob_bw = self._get_glob_bw(self._glob_bw)  # TO DO: take into account weights here...
 
-            print('cov:')
-            print(self._cov)
-
-            print('Input bw:')
-            print(bandwidth.shape)
-            print(np.mean(bandwidth))
-            print(bandwidth)
-
             # Standardize bandwidth to be in the same space as the KDE
             std_bandwidth = standardize_nd_sample(bandwidth.reshape((-1,1)), mean=np.zeros_like(self._mean), cov=self._cov,
                                       cholesky=True, ret_stats=False,
                                       diag=self._diag_cov).reshape((-1,))
 
-            print('Standardized input bw:')
-            print(std_bandwidth.shape)
-            print(np.mean(std_bandwidth))
-            print(std_bandwidth)
-
             self._inv_loc_bw = 1./std_bandwidth
-
-            print('Inverse local bandwidth:')
-            print(self._inv_loc_bw.shape)
-            print(np.mean(self._inv_loc_bw))
-            print(self._inv_loc_bw)
 
         else:
             # Get global bandwidth number
@@ -251,10 +233,6 @@ class GaussianKDE(BaseEstimator):
             if self._adaptive:
                 self._kde_values = self._evaluate(self._std_X, adaptive=False)
                 self._calc_local_bandwidth()
-
-                print('Local bandwidth:')
-                print(self._inv_loc_bw.shape)
-                print(self._inv_loc_bw)
 
         return self._mean, self._cov
 
